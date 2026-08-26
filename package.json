@@ -8,9 +8,10 @@
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write",
-    "db:push": "drizzle-kit push",
-    "db:seed": "tsx src/db/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "setup": "bun scripts/setup.ts",
+    "db:push": "bun --env-file=.env.example --env-file=.env.local drizzle-kit push",
+    "db:seed": "bun --env-file=.env.example --env-file=.env.local tsx src/db/seed.ts",
+    "db:studio": "bun --env-file=.env.example --env-file=.env.local drizzle-kit studio"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
