@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Todos
 
-## Getting Started
+A small Next.js App Router todo app with **Better Auth** (email/password) and **SQLite via Drizzle**. Each user’s todos are isolated by `userId` on every query and mutation.
 
-First, run the development server:
+## Local setup
+
+Requires [Bun](https://bun.sh) (this repo pins `packageManager: bun@1.4.0`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+cp .env.example .env.local
+```
+
+Set `BETTER_AUTH_SECRET` to a long random value (32+ characters):
+
+```bash
+openssl rand -base64 32
+```
+
+`BETTER_AUTH_URL` is the fallback origin (default `http://localhost:3000`). Localhost and `127.0.0.1` on any port are allowed via Better Auth `baseURL.allowedHosts`. `DATABASE_URL` points at a local SQLite file (`file:./data/app.db`).
+
+Create tables:
+
+```bash
+bun run db:push
+```
+
+Start the app:
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). A demo user is seeded automatically on `bun dev` (or `bun run db:seed`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Email: `demo@example.com`
+- Password: `demo1234`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The sign-in form is prefilled with those values. You can also create a new account at `/sign-up`.
 
-## Learn More
+## Environment variables
 
-To learn more about Next.js, take a look at the following resources:
+| Name | Purpose |
+| --- | --- |
+| `BETTER_AUTH_SECRET` | Auth encryption/signing secret (never commit the real value) |
+| `BETTER_AUTH_URL` | Public origin, e.g. `http://localhost:3000` |
+| `DATABASE_URL` | SQLite path, e.g. `file:./data/app.db` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Layout
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/app            routes
+src/components     auth + todos UI
+src/db             SQLite, schema, seed
+src/lib            auth, session, todo actions
+```
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Auth:** Better Auth with the Drizzle SQLite adapter, HTTP-only session cookies, cookie cache, database-backed rate limits on sign-in/sign-up, and `nextCookies()` so cookies work from Server Actions. Pages and mutations still call `auth.api.getSession`; `src/proxy.ts` only does an optimistic cookie check for redirects.
+- **Data:** `todos.userId` references `user.id` with `ON DELETE CASCADE`. List/update always include `eq(todos.userId, session.user.id)`.
+- **UI:** Server-rendered list plus client forms. Search, status, and priority are query params.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Trade-offs
+
+- SQLite is enough for the assignment and local demo; Postgres would be a better production default.
+- Email verification and password reset are omitted to keep the scope to the brief.
+- Completing or changing priority is a server action (no optimistic cache layer).
